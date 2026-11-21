@@ -1,13 +1,13 @@
-"""Generate THE WORLD front page for Friday 20 November 2026 (v2).
+"""Generate THE WORLD front page for Friday 20 November 2026 (v3).
 
 Draws the whole page with PIL primitives only (no external assets, no
 network). Deterministic: same input always writes the same bytes.
 Run:  python3 gen_image.py   (writes entry.png next to this file)
 
-v2 changes vs v1: the Markets headline no longer strands "ST" on its own
-line ("AI ROUT PUSHES WALL ST INTO CORRECTION"); the bridge illustration
-drops the arches, shows its piers, and has a broken deck section with a
-tilted slab falling where the blast hit.
+v3 changes vs v2: a row of portrait medallions of the day's three central
+figures — Putin, Zelensky and Trump — between the subhead and the lead
+illustration; the illustration is shorter to make room, and the masthead
+and headlines are tightened slightly.
 """
 import math
 import os
@@ -82,6 +82,65 @@ def burst(draw, cx, cy, r, color, rays=12):
     draw.polygon(pts, fill=color)
 
 
+def medallion(img, cx, top, size, skin, hair_color, hair_style, shirt, tie, stubble):
+    """Draw a stylised bust portrait clipped to a circle, centred at (cx, top).
+
+    hair_style: 'swoop' (side-swept blond), 'short' (receding, light),
+    'cap' (short dark crop). stubble=True darkens the jaw. tie=None for
+    a crew-neck shirt instead of suit + tie.
+    """
+    layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    c = size // 2
+    # shoulders / shirt
+    d.ellipse([c - size * 0.48, size * 0.78, c + size * 0.48, size * 1.35], fill=shirt)
+    # neck
+    d.rectangle([c - 6, size * 0.58, c + 6, size * 0.78], fill=skin)
+    # tie
+    if tie:
+        d.polygon([(c - 4, size * 0.78), (c + 4, size * 0.78),
+                   (c + 3, size * 0.98), (c, size * 1.02), (c - 3, size * 0.98)], fill=tie)
+        d.polygon([(c - 8, size * 0.78), (c, size * 0.86), (c - 4, size * 0.78)], fill=(255, 255, 255))
+        d.polygon([(c + 8, size * 0.78), (c, size * 0.86), (c + 4, size * 0.78)], fill=(255, 255, 255))
+    # head
+    hx0, hy0 = c - size * 0.26, size * 0.10
+    hx1, hy1 = c + size * 0.26, size * 0.66
+    d.ellipse([hx0, hy0, hx1, hy1], fill=skin)
+    # ears
+    d.ellipse([hx0 - 3, size * 0.32, hx0 + 2, size * 0.44], fill=skin)
+    d.ellipse([hx1 - 2, size * 0.32, hx1 + 3, size * 0.44], fill=skin)
+    # stubble: darker jaw
+    if stubble:
+        d.pieslice([hx0 + 1, size * 0.34, hx1 - 1, hy1], 20, 160, fill=(122, 106, 90))
+        d.ellipse([hx0, hy0, hx1, hy1], outline=skin, width=1)
+    # hair
+    if hair_style == "swoop":
+        # side-swept blond, combed over to the figure's left
+        d.polygon([(hx0 - 1, size * 0.30), (hx0 + 2, size * 0.10),
+                   (c + 2, size * 0.06), (hx1 + 2, size * 0.16),
+                   (hx1 + 1, size * 0.26), (c + 4, size * 0.20),
+                   (c - 6, size * 0.22), (hx0 + 2, size * 0.30)], fill=hair_color)
+    elif hair_style == "short":
+        # receding light hair: a band over the top, forehead exposed
+        d.pieslice([hx0 - 1, hy0 - 2, hx1 + 1, size * 0.34], 180, 360, fill=hair_color)
+    else:  # cap
+        d.pieslice([hx0 - 1, hy0 - 2, hx1 + 1, size * 0.36], 180, 360, fill=hair_color)
+    # eyes, brows, nose, mouth (kept minimal at this size)
+    eye_y = size * 0.36
+    for ex in (c - 7, c + 7):
+        d.ellipse([ex - 1, eye_y - 1, ex + 1, eye_y + 1], fill=(40, 32, 28))
+        d.line([(ex - 4, eye_y - 4), (ex + 4, eye_y - 4)], fill=(90, 70, 55), width=1)
+    d.line([(c, size * 0.40), (c, size * 0.48)], fill=(150, 115, 95), width=1)
+    d.line([(c - 4, size * 0.55), (c + 4, size * 0.55)], fill=(120, 85, 75), width=1)
+    # clip to a circle and paste
+    mask = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, size - 1, size - 1], fill=255)
+    img.paste(layer, (cx - c, top), mask)
+    # ring
+    ImageDraw.Draw(img).ellipse([cx - c, top, cx + c - 1, top + size - 1],
+                                outline=(120, 110, 95), width=2)
+
+
 def main():
     img = Image.new("RGB", (W, H), PAPER)
     d = ImageDraw.Draw(img)
@@ -98,9 +157,9 @@ def main():
     # ---- masthead ----
     y += 6
     mast = "THE WORLD"
-    f_mast = SERIF_B(60)
+    f_mast = SERIF_B(54)
     d.text(((W - d.textlength(mast, font=f_mast)) / 2, y), mast, font=f_mast, fill=INK)
-    y += 70
+    y += 64
     d.line([(MARGIN, y), (W - MARGIN, y)], fill=INK, width=3)
     y += 12
 
@@ -109,11 +168,11 @@ def main():
     y += 28
     headline = ["RUSSIA'S BIGGEST BARRAGE", "HITS UKRAINE, SPILLS INTO POLAND"]
     for line in headline:
-        size = 54
+        size = 52
         while d.textlength(line, font=SERIF_B(size)) > USABLE and size > 44:
             size -= 2
         d.text((MARGIN, y), line, font=SERIF_B(size), fill=INK)
-        y += 58
+        y += 56
     y += 2
 
     # ---- subhead ----
@@ -123,20 +182,38 @@ def main():
     y = draw_lines(d, lines, MARGIN, y, SERIF_I(23), INK, 30)
     y += 8
 
+    # ---- the day's faces: Putin, Zelensky, Trump ----
+    med_size = 56
+    med_top = y
+    gap = 150
+    start_x = W // 2 - gap
+    faces = [
+        ("PUTIN", (232, 198, 168), (198, 188, 168), "short", (38, 48, 66), (178, 34, 34), False),
+        ("ZELENSKY", (214, 178, 148), (58, 50, 44), "cap", (88, 92, 62), None, True),
+        ("TRUMP", (238, 205, 172), (232, 200, 118), "swoop", (32, 42, 62), (178, 34, 34), False),
+    ]
+    for i, (name, skin, hair, style, shirt, tie, stubble) in enumerate(faces):
+        cx = start_x + i * gap
+        medallion(img, cx, med_top, med_size, skin, hair, style, shirt, tie, stubble)
+        nw = d.textlength(name, font=SANS_B(15))
+        d.text((cx - nw / 2, med_top + med_size + 4), name, font=SANS_B(15), fill=INK)
+    y = med_top + med_size + 22
+    y += 6
+
     # ---- illustration: a suspension bridge at night, hit and broken ----
     ill_top = y
-    ill_h = 160
+    ill_h = 110
     d.rectangle([MARGIN, ill_top, W - MARGIN, ill_top + ill_h], fill=NAVY)
-    for (sx, sy) in [(90, 16), (170, 36), (300, 14), (520, 30), (700, 16),
-                     (830, 34), (930, 18), (420, 42), (620, 46)]:
+    for (sx, sy) in [(90, 12), (170, 26), (300, 10), (520, 22), (700, 12),
+                     (830, 24), (930, 14), (420, 30), (620, 32)]:
         d.ellipse([MARGIN + sx - 2, ill_top + sy - 2, MARGIN + sx + 2, ill_top + sy + 2],
                   fill=(220, 220, 220))
     # missile trails diving in from the top right
-    d.line([(MARGIN + 880, ill_top + 6), (MARGIN + 700, ill_top + 72)], fill=ORANGE, width=3)
-    d.line([(MARGIN + 940, ill_top + 22), (MARGIN + 800, ill_top + 82)], fill=(255, 220, 160), width=2)
-    d.ellipse([MARGIN + 694, ill_top + 66, MARGIN + 706, ill_top + 78], fill=GOLD)
-    d.line([(MARGIN + 420, ill_top + 4), (MARGIN + 330, ill_top + 60)], fill=(255, 220, 160), width=2)
-    deck_y = ill_top + 112
+    d.line([(MARGIN + 880, ill_top + 4), (MARGIN + 700, ill_top + 50)], fill=ORANGE, width=3)
+    d.line([(MARGIN + 940, ill_top + 16), (MARGIN + 800, ill_top + 58)], fill=(255, 220, 160), width=2)
+    d.ellipse([MARGIN + 694, ill_top + 44, MARGIN + 706, ill_top + 56], fill=GOLD)
+    d.line([(MARGIN + 420, ill_top + 2), (MARGIN + 330, ill_top + 42)], fill=(255, 220, 160), width=2)
+    deck_y = ill_top + 78
     steel = (190, 196, 210)
 
     def cable(x0, x1, y_top, sag):
@@ -150,31 +227,31 @@ def main():
 
     # towers: pairs of verticals with a top crossbar
     for tx in (MARGIN + 200, MARGIN + 560):
-        d.rectangle([tx, ill_top + 44, tx + 10, deck_y], fill=steel)
-        d.rectangle([tx + 56, ill_top + 44, tx + 66, deck_y], fill=steel)
-        d.rectangle([tx, ill_top + 44, tx + 66, ill_top + 52], fill=steel)
-    cable(MARGIN + 48, MARGIN + 200, ill_top + 48, 52)
-    cable(MARGIN + 266, MARGIN + 560, ill_top + 48, 52)
-    cable(MARGIN + 626, MARGIN + 880, ill_top + 48, 52)
+        d.rectangle([tx, ill_top + 30, tx + 10, deck_y], fill=steel)
+        d.rectangle([tx + 56, ill_top + 30, tx + 66, deck_y], fill=steel)
+        d.rectangle([tx, ill_top + 30, tx + 66, ill_top + 38], fill=steel)
+    cable(MARGIN + 48, MARGIN + 200, ill_top + 32, 36)
+    cable(MARGIN + 266, MARGIN + 560, ill_top + 32, 36)
+    cable(MARGIN + 626, MARGIN + 880, ill_top + 32, 36)
     # river, then piers over it, then the deck band
-    d.rectangle([MARGIN, deck_y + 10, W - MARGIN, ill_top + ill_h], fill=NAVY2)
+    d.rectangle([MARGIN, deck_y + 8, W - MARGIN, ill_top + ill_h], fill=NAVY2)
     for px in (MARGIN + 120, MARGIN + 400, MARGIN + 700, MARGIN + 860):
-        d.rectangle([px, deck_y + 10, px + 12, ill_top + ill_h - 8], fill=(120, 128, 150))
-    d.rectangle([MARGIN, deck_y, W - MARGIN, deck_y + 10], fill=steel)
+        d.rectangle([px, deck_y + 8, px + 12, ill_top + ill_h - 6], fill=(120, 128, 150))
+    d.rectangle([MARGIN, deck_y, W - MARGIN, deck_y + 8], fill=steel)
     d.rectangle([MARGIN, deck_y, W - MARGIN, deck_y + 2], fill=(235, 238, 245))
     for rx in (140, 320, 560, 780):
-        d.line([(MARGIN + rx, ill_top + ill_h - 22), (MARGIN + rx + 60, ill_top + ill_h - 22)],
+        d.line([(MARGIN + rx, ill_top + ill_h - 14), (MARGIN + rx + 60, ill_top + ill_h - 14)],
                fill=(90, 120, 170), width=2)
     # broken deck: a gap where the blast hit, with a tilted slab falling
     gap_x = MARGIN + 232
-    d.rectangle([gap_x, deck_y, gap_x + 36, deck_y + 10], fill=NAVY)
-    d.polygon([(gap_x + 2, deck_y + 4), (gap_x + 34, deck_y + 4),
-               (gap_x + 52, deck_y + 30), (gap_x + 20, deck_y + 30)], fill=steel)
+    d.rectangle([gap_x, deck_y, gap_x + 36, deck_y + 8], fill=NAVY)
+    d.polygon([(gap_x + 2, deck_y + 3), (gap_x + 34, deck_y + 3),
+               (gap_x + 52, deck_y + 24), (gap_x + 20, deck_y + 24)], fill=steel)
     # explosions over the deck
-    burst(d, MARGIN + 250, ill_top + 92, 12, ORANGE)
-    burst(d, MARGIN + 250, ill_top + 92, 6, GOLD)
-    burst(d, MARGIN + 640, ill_top + 78, 9, ORANGE)
-    burst(d, MARGIN + 640, ill_top + 78, 4, GOLD)
+    burst(d, MARGIN + 250, ill_top + 62, 10, ORANGE)
+    burst(d, MARGIN + 250, ill_top + 62, 5, GOLD)
+    burst(d, MARGIN + 640, ill_top + 52, 8, ORANGE)
+    burst(d, MARGIN + 640, ill_top + 52, 4, GOLD)
     y = ill_top + ill_h + 6
     d.text((MARGIN, y), "KYIV'S BRIDGES UNDER FIRE — AND TWO MISSILES LAND IN POLAND",
            font=SANS_B(15), fill=GREY)
@@ -199,8 +276,8 @@ def main():
         yy = row_y
         d.text((x, yy), kick, font=SANS_B(17), fill=RED)
         yy += 22
-        hl = fit(d, head, SERIF_B(27), col_w, 2)
-        yy = draw_lines(d, hl, x, yy, SERIF_B(27), INK, 32)
+        hl = fit(d, head, SERIF_B(26), col_w, 2)
+        yy = draw_lines(d, hl, x, yy, SERIF_B(26), INK, 31)
         yy += 4
         bl = fit(d, body, SANS(19), col_w, 2)
         yy = draw_lines(d, bl, x, yy, SANS(19), INK, 25)
@@ -229,8 +306,8 @@ def main():
         yy = row_y
         d.text((x, yy), kick, font=SANS_B(16), fill=RED)
         yy += 20
-        hl = fit(d, head, SERIF_B(21), col3, 3)
-        yy = draw_lines(d, hl, x, yy, SERIF_B(21), INK, 26)
+        hl = fit(d, head, SERIF_B(20), col3, 3)
+        yy = draw_lines(d, hl, x, yy, SERIF_B(20), INK, 25)
         yy += 4
         bl = fit(d, body, SANS(17), col3, 2)
         yy = draw_lines(d, bl, x, yy, SANS(17), INK, 23)

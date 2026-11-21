@@ -8,7 +8,8 @@ missiles overnight — hitting Kyiv's bridges and power grid, with two missiles
 landing inside NATO member Poland. Also: the AI sell-off pushes Wall Street into
 correction, COP31 runs into overtime in Antalya, Britain and the EU seal their
 biggest post-Brexit reset, a tanker is hit in the Strait of Hormuz, and a Houthi
-missile damages Riyadh's tallest tower.
+missile damages Riyadh's tallest tower. Portrait medallions of the day's three
+central figures — Putin, Zelensky and Trump — sit under the lead headline.
 
 Regenerate the image:
 
