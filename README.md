@@ -8,8 +8,13 @@ missiles overnight — hitting Kyiv's bridges and power grid, with two missiles
 landing inside NATO member Poland. Also: the AI sell-off pushes Wall Street into
 correction, COP31 runs into overtime in Antalya, Britain and the EU seal their
 biggest post-Brexit reset, a tanker is hit in the Strait of Hormuz, and a Houthi
-missile damages Riyadh's tallest tower. Portrait medallions of the day's three
+missile damages Riyadh's tallest tower. Real photographs of the day's three
 central figures — Putin, Zelensky and Trump — sit under the lead headline.
+
+Photo credits (all from Wikimedia Commons): Donald J. Trump, official White
+House portrait, January 2025 — public domain. Vladimir Putin, official Kremlin
+portrait — CC BY 4.0. Volodymyr Zelensky, 2022 official portrait,
+president.gov.ua — CC BY 4.0.
 
 Regenerate the image:
 

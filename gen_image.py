@@ -1,13 +1,15 @@
-"""Generate THE WORLD front page for Friday 20 November 2026 (v3).
+"""Generate THE WORLD front page for Friday 20 November 2026 (v4).
 
-Draws the whole page with PIL primitives only (no external assets, no
-network). Deterministic: same input always writes the same bytes.
+Draws the whole page with PIL primitives only, except for the three
+portrait medallions, which are real official photographs held in the
+repository (assets/): Trump (White House, public domain), Putin
+(Kremlin, CC BY 4.0) and Zelensky (president.gov.ua, CC BY 4.0).
+No network is used at run time. Deterministic: same input always
+writes the same bytes.
 Run:  python3 gen_image.py   (writes entry.png next to this file)
 
-v3 changes vs v2: a row of portrait medallions of the day's three central
-figures — Putin, Zelensky and Trump — between the subhead and the lead
-illustration; the illustration is shorter to make room, and the masthead
-and headlines are tightened slightly.
+v4 changes vs v3: the cartoon portrait medallions are replaced by the
+real photographs, cropped to circles.
 """
 import math
 import os
@@ -26,6 +28,7 @@ ORANGE = (255, 140, 40)
 GOLD = (255, 196, 66)
 
 FONT_DIR = "/usr/share/fonts/truetype/dejavu"
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def font(name, size):
@@ -82,62 +85,21 @@ def burst(draw, cx, cy, r, color, rays=12):
     draw.polygon(pts, fill=color)
 
 
-def medallion(img, cx, top, size, skin, hair_color, hair_style, shirt, tie, stubble):
-    """Draw a stylised bust portrait clipped to a circle, centred at (cx, top).
+def photo_medallion(img, cx, top, size, path):
+    """Paste a real photograph as a circular portrait medallion.
 
-    hair_style: 'swoop' (side-swept blond), 'short' (receding, light),
-    'cap' (short dark crop). stubble=True darkens the jaw. tie=None for
-    a crew-neck shirt instead of suit + tie.
+    The source portraits are head-and-shoulders, so a square crop from
+    the top keeps the face in the upper half of the circle.
     """
-    layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(layer)
-    c = size // 2
-    # shoulders / shirt
-    d.ellipse([c - size * 0.48, size * 0.78, c + size * 0.48, size * 1.35], fill=shirt)
-    # neck
-    d.rectangle([c - 6, size * 0.58, c + 6, size * 0.78], fill=skin)
-    # tie
-    if tie:
-        d.polygon([(c - 4, size * 0.78), (c + 4, size * 0.78),
-                   (c + 3, size * 0.98), (c, size * 1.02), (c - 3, size * 0.98)], fill=tie)
-        d.polygon([(c - 8, size * 0.78), (c, size * 0.86), (c - 4, size * 0.78)], fill=(255, 255, 255))
-        d.polygon([(c + 8, size * 0.78), (c, size * 0.86), (c + 4, size * 0.78)], fill=(255, 255, 255))
-    # head
-    hx0, hy0 = c - size * 0.26, size * 0.10
-    hx1, hy1 = c + size * 0.26, size * 0.66
-    d.ellipse([hx0, hy0, hx1, hy1], fill=skin)
-    # ears
-    d.ellipse([hx0 - 3, size * 0.32, hx0 + 2, size * 0.44], fill=skin)
-    d.ellipse([hx1 - 2, size * 0.32, hx1 + 3, size * 0.44], fill=skin)
-    # stubble: darker jaw
-    if stubble:
-        d.pieslice([hx0 + 1, size * 0.34, hx1 - 1, hy1], 20, 160, fill=(122, 106, 90))
-        d.ellipse([hx0, hy0, hx1, hy1], outline=skin, width=1)
-    # hair
-    if hair_style == "swoop":
-        # side-swept blond, combed over to the figure's left
-        d.polygon([(hx0 - 1, size * 0.30), (hx0 + 2, size * 0.10),
-                   (c + 2, size * 0.06), (hx1 + 2, size * 0.16),
-                   (hx1 + 1, size * 0.26), (c + 4, size * 0.20),
-                   (c - 6, size * 0.22), (hx0 + 2, size * 0.30)], fill=hair_color)
-    elif hair_style == "short":
-        # receding light hair: a band over the top, forehead exposed
-        d.pieslice([hx0 - 1, hy0 - 2, hx1 + 1, size * 0.34], 180, 360, fill=hair_color)
-    else:  # cap
-        d.pieslice([hx0 - 1, hy0 - 2, hx1 + 1, size * 0.36], 180, 360, fill=hair_color)
-    # eyes, brows, nose, mouth (kept minimal at this size)
-    eye_y = size * 0.36
-    for ex in (c - 7, c + 7):
-        d.ellipse([ex - 1, eye_y - 1, ex + 1, eye_y + 1], fill=(40, 32, 28))
-        d.line([(ex - 4, eye_y - 4), (ex + 4, eye_y - 4)], fill=(90, 70, 55), width=1)
-    d.line([(c, size * 0.40), (c, size * 0.48)], fill=(150, 115, 95), width=1)
-    d.line([(c - 4, size * 0.55), (c + 4, size * 0.55)], fill=(120, 85, 75), width=1)
-    # clip to a circle and paste
+    photo = Image.open(os.path.join(HERE, path)).convert("RGB")
+    w, _h = photo.size
+    crop = photo.crop((0, 0, w, w))
+    crop = crop.resize((size, size), Image.LANCZOS)
     mask = Image.new("L", (size, size), 0)
     ImageDraw.Draw(mask).ellipse([0, 0, size - 1, size - 1], fill=255)
-    img.paste(layer, (cx - c, top), mask)
+    img.paste(crop, (cx - size // 2, top), mask)
     # ring
-    ImageDraw.Draw(img).ellipse([cx - c, top, cx + c - 1, top + size - 1],
+    ImageDraw.Draw(img).ellipse([cx - size // 2, top, cx + size // 2 - 1, top + size - 1],
                                 outline=(120, 110, 95), width=2)
 
 
@@ -182,19 +144,19 @@ def main():
     y = draw_lines(d, lines, MARGIN, y, SERIF_I(23), INK, 30)
     y += 8
 
-    # ---- the day's faces: Putin, Zelensky, Trump ----
+    # ---- the day's faces: real photographs of Putin, Zelensky, Trump ----
     med_size = 56
     med_top = y
     gap = 150
     start_x = W // 2 - gap
     faces = [
-        ("PUTIN", (232, 198, 168), (198, 188, 168), "short", (38, 48, 66), (178, 34, 34), False),
-        ("ZELENSKY", (214, 178, 148), (58, 50, 44), "cap", (88, 92, 62), None, True),
-        ("TRUMP", (238, 205, 172), (232, 200, 118), "swoop", (32, 42, 62), (178, 34, 34), False),
+        ("PUTIN", "assets/putin.jpg"),
+        ("ZELENSKY", "assets/zelensky.jpg"),
+        ("TRUMP", "assets/trump.jpg"),
     ]
-    for i, (name, skin, hair, style, shirt, tie, stubble) in enumerate(faces):
+    for i, (name, path) in enumerate(faces):
         cx = start_x + i * gap
-        medallion(img, cx, med_top, med_size, skin, hair, style, shirt, tie, stubble)
+        photo_medallion(img, cx, med_top, med_size, path)
         nw = d.textlength(name, font=SANS_B(15))
         d.text((cx - nw / 2, med_top + med_size + 4), name, font=SANS_B(15), fill=INK)
     y = med_top + med_size + 22
@@ -332,7 +294,7 @@ def main():
     d.text((MARGIN, band_top + 8), t1, font=SANS_B(19), fill=(255, 255, 255))
     d.text((MARGIN, band_top + 33), t2, font=SANS(19), fill=(210, 205, 195))
 
-    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "entry.png")
+    out = os.path.join(HERE, "entry.png")
     img.save(out, format="JPEG", quality=90, optimize=True)
     print("wrote", out, os.path.getsize(out), "bytes")
 
