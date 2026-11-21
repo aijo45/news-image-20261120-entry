@@ -1,8 +1,13 @@
-"""Generate THE WORLD front page for Friday 20 November 2026.
+"""Generate THE WORLD front page for Friday 20 November 2026 (v2).
 
 Draws the whole page with PIL primitives only (no external assets, no
 network). Deterministic: same input always writes the same bytes.
 Run:  python3 gen_image.py   (writes entry.png next to this file)
+
+v2 changes vs v1: the Markets headline no longer strands "ST" on its own
+line ("AI ROUT PUSHES WALL ST INTO CORRECTION"); the bridge illustration
+drops the arches, shows its piers, and has a broken deck section with a
+tilted slab falling where the blast hit.
 """
 import math
 import os
@@ -118,7 +123,7 @@ def main():
     y = draw_lines(d, lines, MARGIN, y, SERIF_I(23), INK, 30)
     y += 8
 
-    # ---- illustration: a suspension bridge at night under attack ----
+    # ---- illustration: a suspension bridge at night, hit and broken ----
     ill_top = y
     ill_h = 160
     d.rectangle([MARGIN, ill_top, W - MARGIN, ill_top + ill_h], fill=NAVY)
@@ -151,18 +156,20 @@ def main():
     cable(MARGIN + 48, MARGIN + 200, ill_top + 48, 52)
     cable(MARGIN + 266, MARGIN + 560, ill_top + 48, 52)
     cable(MARGIN + 626, MARGIN + 880, ill_top + 48, 52)
-    # deck band + piers + arches
-    d.rectangle([MARGIN, deck_y, W - MARGIN, deck_y + 10], fill=steel)
-    d.rectangle([MARGIN, deck_y, W - MARGIN, deck_y + 2], fill=(235, 238, 245))
+    # river, then piers over it, then the deck band
+    d.rectangle([MARGIN, deck_y + 10, W - MARGIN, ill_top + ill_h], fill=NAVY2)
     for px in (MARGIN + 120, MARGIN + 400, MARGIN + 700, MARGIN + 860):
         d.rectangle([px, deck_y + 10, px + 12, ill_top + ill_h - 8], fill=(120, 128, 150))
-    for ax in (MARGIN + 60, MARGIN + 300, MARGIN + 560, MARGIN + 800):
-        d.arc([ax, deck_y - 44, ax + 120, deck_y + 6], 180, 360, fill=steel, width=5)
-    # river
-    d.rectangle([MARGIN, deck_y + 10, W - MARGIN, ill_top + ill_h], fill=NAVY2)
+    d.rectangle([MARGIN, deck_y, W - MARGIN, deck_y + 10], fill=steel)
+    d.rectangle([MARGIN, deck_y, W - MARGIN, deck_y + 2], fill=(235, 238, 245))
     for rx in (140, 320, 560, 780):
         d.line([(MARGIN + rx, ill_top + ill_h - 22), (MARGIN + rx + 60, ill_top + ill_h - 22)],
                fill=(90, 120, 170), width=2)
+    # broken deck: a gap where the blast hit, with a tilted slab falling
+    gap_x = MARGIN + 232
+    d.rectangle([gap_x, deck_y, gap_x + 36, deck_y + 10], fill=NAVY)
+    d.polygon([(gap_x + 2, deck_y + 4), (gap_x + 34, deck_y + 4),
+               (gap_x + 52, deck_y + 30), (gap_x + 20, deck_y + 30)], fill=steel)
     # explosions over the deck
     burst(d, MARGIN + 250, ill_top + 92, 12, ORANGE)
     burst(d, MARGIN + 250, ill_top + 92, 6, GOLD)
@@ -179,7 +186,7 @@ def main():
     col_w = (USABLE - 32) // 2
     secondaries = [
         ("MARKETS",
-         "AI SELL-OFF PUSHES WALL ST INTO CORRECTION",
+         "AI ROUT PUSHES WALL ST INTO CORRECTION",
          "Nasdaq -5.3%, S&P -3.7%; Nvidia -14% as the SEC examines its books."),
         ("CLIMATE",
          "COP31 RUNS INTO OVERTIME",
